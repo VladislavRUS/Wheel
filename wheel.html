@@ -85,16 +85,20 @@
                     caught = true;
                 }
                 
+                if (cnt === 3) {
+                    setTimeout(function() {
+                        finished.play();        
+                    }, 500);
+                }
+                
                 if (cnt === 4) {
-                    finished.play();
-                    
                     audio.pause();
                     
                     setTimeout(function() {
                         stopped = true;
                         started = false;
                         
-                    }, 100);        
+                    }, 0);        
                 }
             } else {
                 caught = false;
