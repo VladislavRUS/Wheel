@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <style type="text/css">
+        html {
+            height: 100%
+        }
+        
+        body {
+            padding: 0px;
+            margin: 0px;
+            overflow: hidden;
+            height: 100%;
+            background: linear-gradient(#000, #820, #000);
+        }
+        
+        #canvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 100%;
+        }
+        
+        p {
+            display: inline;
+        }
+        
+        #sections {
+            position: relative;
+            top: 100px;
+            left: 100px;
+        }
+
+    </style>
+</head>
+
+<body>
+    <canvas id="world"></canvas>
+    <canvas id="canvas" width="972" height="962"></canvas>
+    
+    <div id="sections"></div>
+    
+    <script src="http://code.jquery.com/jquery-1.11.0.js"></script>
+    
+    <script>
+        var sections = ["Крокодил", "Шарады", "Прятки", "Прятки", "Прятки", "Прятки", "Прятки"];
+        var target = "Шарады";
+        
+        var colors = ["#F84", "#8F4", "#48F", "#F8F"];
+        //var colors = ['rgb(187, 51, 238)', 'rgb(0, 187, 136)', 'rgb(255, 34, 68)', 'rgb(255, 204, 68)', '#3498db'];
+        var audio = new Audio('wheel_full.mp3');
+        var finished = new Audio('wheel_sound_finished.mp3');
+        
+        audio.onended = function() {
+            audio.play();    
+        }
+      
+        var angle = 0, cnt = 0;
+        var stopped = false, 
+            started = false, 
+            show = false,
+            caught = false;
+        
+        function repaint() {
+            canvas.width = innerWidth;
+            canvas.height = innerHeight;
+            var r = Math.min(innerWidth, innerHeight) / 2.25;
+            var cx = innerWidth / 2,
+                cy = innerHeight / 2;
+            var ctx = canvas.getContext("2d");
+            var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            g.addColorStop(0, "rgba(0,0,0,0)");
+            g.addColorStop(1, "rgba(0,0,0,0.5)");
+            var selected = (Math.floor((-0.2 - angle) * sections.length / (2 * Math.PI)) % sections.length);
+            
+            if (selected < 0) selected += sections.length;
+            
+            if (sections[selected] == target) {
+                if (!caught) {
+                    cnt++;
+                    caught = true;
+                }
+                
+                if (cnt === 4) {
+                    finished.play();
+                    
+                    audio.pause();
+                    
+                    setTimeout(function() {
+                        stopped = true;
+                        started = false;
+                        
+                    }, 100);        
+                }
+            } else {
+                caught = false;
+            }
+            
+            if (selected < 0) selected += sections.length;
+            
+            for (var i = 0; i < sections.length; i++) {
+                var a0 = angle + 2 * Math.PI * i / sections.length;
+                var a1 = a0 + 2 * Math.PI / (i == 0 ? 1 : sections.length);
+                var a = angle + 2 * Math.PI * (i + 0.5) / sections.length;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, a0, a1, false);
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+                ctx.fillStyle = g;
+                ctx.fill();
+                ctx.save();
+                if (i == selected) {
+                    ctx.fillStyle = "#FFF";
+                    ctx.shadowColor = "#FFF";
+                    ctx.shadowBlur = r / 20;
+                    
+                } else {
+                    ctx.fillStyle = "#BBB";
+                    ctx.shadowColor = "#000";
+                    ctx.shadowBlur = r / 100;
+                }
+                if (sections.length < 7) {
+                    
+                    ctx.font = "bold " + r / sections.length * 0.55 + "px serif";
+                    
+                } else {
+                    ctx.font = "bold " + r / sections.length * 0.8 + "px serif";
+                }
+                
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.translate(cx, cy);
+                ctx.rotate(a);
+                ctx.fillText(sections[i], r * 0.62, 0);
+                ctx.restore();
+            }
+            ctx.shadowOffsetX = r / 80;
+            ctx.shadowOffsetY = r / 80;
+            ctx.shadowBlur = r / 40;
+            ctx.shadowColor = "rgba(0,0,0,0.5)";
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 1.025, 0, 2 * Math.PI, true);
+            ctx.arc(cx, cy, r * 0.975, 0, 2 * Math.PI, false);
+            ctx.fillStyle = "#444";
+            ctx.fill();
+            ctx.shadowOffsetX = r / 40;
+            ctx.shadowOffsetY = r / 40;
+            g = ctx.createRadialGradient(cx - r / 7, cy - r / 7, 0, cx, cy, r / 3);
+            //g.addColorStop(0, "#FFF");
+            g.addColorStop(0.2, "#F44");
+            g.addColorStop(1, "#811");
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r / 5.5, 0, 2 * Math.PI, false);
+            ctx.fill();
+            ctx.translate(cx, cy);
+            ctx.rotate(Math.PI - 0.2);
+            ctx.beginPath();
+            ctx.moveTo(-r * 1.1, -r * 0.05);
+            ctx.lineTo(-r * 0.9, 0);
+            ctx.lineTo(-r * 1.1, r * 0.05);
+            ctx.fillStyle = "#F44";
+            ctx.fill();
+            
+            if (!stopped) {
+                if (started) {
+                    angle += 0.15;
+                }
+                
+                requestAnimationFrame(repaint);
+            }
+        }
+
+        repaint(angle);
+        hideSections();
+        
+        canvas.onclick = function() {
+            audio.play();
+            stopped = false;
+            started = true;
+        }
+
+        function showSections() {
+            $('#world').hide();
+            $('#canvas').hide();
+            
+            $('#sections').show();
+            
+            sections.forEach(function(section, idx) {
+                console.log(idx);
+                
+                var div = $('<div/>');
+                
+                var sectionBtn = $('<button></button>').text(section);
+                sectionBtn.bind('click', function() {
+                    target = $(this).html();
+                    console.log(target);
+                });
+                
+                div.append(sectionBtn);
+                
+                $('#sections').append(div);
+            });
+            
+            var input = $('<input type="text" id="newSection"/>');
+            var btn = $('<button>Добавить</button>')
+            
+            $('#sections').append(input).append(btn);
+            
+            btn.bind('click', function() {
+                var newSection = $('#newSection').val();
+                
+                if (newSection == '') {
+                    alert('Введите текст!');
+                    
+                } else {
+                    sections.push(newSection);
+                    hideSections();
+                    showSections();
+                }
+            });
+        }
+        
+        function hideSections() {
+            $('#world').show();
+            $('#canvas').show();
+            
+            $('#sections')
+                .empty()
+                .hide();
+        }
+        
+        document.addEventListener('keypress', function(event) {
+            switch(event.keyCode) {
+                case 13: {
+                    show = !show;
+                    
+                    if (show) {
+                        showSections();
+                
+                    } else {
+                        hideSections();
+                    }
+                    
+                    break;
+                }
+            }
+        });
+        
+    </script>
+    
+    
+    <script>
+        (function() {
+  var COLORS, Confetti, NUM_CONFETTI, PI_2, canvas, confetti, context, drawCircle, i, range, resizeWindow, xpos;
+
+  NUM_CONFETTI = 350;
+
+  COLORS = [[85, 71, 106], [174, 61, 99], [219, 56, 83], [244, 92, 68], [248, 182, 70]];
+
+  PI_2 = 2 * Math.PI;
+
+  canvas = document.getElementById("world");
+
+  context = canvas.getContext("2d");
+
+  window.w = 0;
+
+  window.h = 0;
+
+  resizeWindow = function() {
+    window.w = canvas.width = window.innerWidth;
+    return window.h = canvas.height = window.innerHeight;
+  };
+
+  window.addEventListener('resize', resizeWindow, false);
+
+  window.onload = function() {
+    return setTimeout(resizeWindow, 0);
+  };
+
+  range = function(a, b) {
+    return (b - a) * Math.random() + a;
+  };
+
+  drawCircle = function(x, y, r, style) {
+    context.beginPath();
+    context.arc(x, y, r, 0, PI_2, false);
+    context.fillStyle = style;
+    return context.fill();
+  };
+
+  xpos = 0.5;
+
+  document.onmousemove = function(e) {
+    return xpos = e.pageX / w;
+  };
+
+  window.requestAnimationFrame = (function() {
+    return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(callback) {
+      return window.setTimeout(callback, 1000 / 60);
+    };
+  })();
+
+  Confetti = (function() {
+    function Confetti() {
+      this.style = COLORS[~~range(0, 5)];
+      this.rgb = "rgba(" + this.style[0] + "," + this.style[1] + "," + this.style[2];
+      this.r = ~~range(2, 6);
+      this.r2 = 2 * this.r;
+      this.replace();
+    }
+
+    Confetti.prototype.replace = function() {
+      this.opacity = 0;
+      this.dop = 0.03 * range(1, 4);
+      this.x = range(-this.r2, w - this.r2);
+      this.y = range(-20, h - this.r2);
+      this.xmax = w - this.r;
+      this.ymax = h - this.r;
+      this.vx = range(0, 2) + 8 * xpos - 5;
+      return this.vy = 0.7 * this.r + range(-1, 1);
+    };
+
+    Confetti.prototype.draw = function() {
+      var ref;
+      this.x += this.vx;
+      this.y += this.vy;
+      this.opacity += this.dop;
+      if (this.opacity > 1) {
+        this.opacity = 1;
+        this.dop *= -1;
+      }
+      if (this.opacity < 0 || this.y > this.ymax) {
+        this.replace();
+      }
+      if (!((0 < (ref = this.x) && ref < this.xmax))) {
+        this.x = (this.x + this.xmax) % this.xmax;
+      }
+      return drawCircle(~~this.x, ~~this.y, this.r, this.rgb + "," + this.opacity + ")");
+    };
+
+    return Confetti;
+
+  })();
+
+  confetti = (function() {
+    var j, ref, results;
+    results = [];
+    for (i = j = 1, ref = NUM_CONFETTI; 1 <= ref ? j <= ref : j >= ref; i = 1 <= ref ? ++j : --j) {
+      results.push(new Confetti);
+    }
+    return results;
+  })();
+
+  window.step = function() {
+    var c, j, len, results;
+    requestAnimationFrame(step);
+    context.clearRect(0, 0, w, h);
+    results = [];
+    for (j = 0, len = confetti.length; j < len; j++) {
+      c = confetti[j];
+      results.push(c.draw());
+    }
+    return results;
+  };
+
+  step();
+
+}).call(this);
+
+    </script>
+
+</body>
+
+</html>
